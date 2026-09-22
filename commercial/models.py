@@ -1,14 +1,19 @@
 # This is an auto-generated Django model module.
+from django.conf import settings
 from django.db import models
+
+# La collation SQL Server French_CI_AS n'existe pas sous SQLite (mode démo) :
+# on ne la fixe que pour la connexion SQL Server habituelle.
+COLLATION_FR = None if settings.MODE_DEMO else 'French_CI_AS'
 
 class Utilisateur(models.Model):
     """Table de base pour tous les utilisateurs"""
-    id_utilisateur = models.CharField(primary_key=True, max_length=30, db_collation='French_CI_AS')
-    nom = models.CharField(max_length=100, db_collation='French_CI_AS')
-    prenom = models.CharField(max_length=60, db_collation='French_CI_AS', blank=True, null=True)
-    email = models.EmailField(unique=True, max_length=200, db_collation='French_CI_AS')
-    password = models.CharField(max_length=255, db_collation='French_CI_AS')
-    telephone = models.CharField(max_length=30, db_collation='French_CI_AS', blank=True, null=True)
+    id_utilisateur = models.CharField(primary_key=True, max_length=30, db_collation=COLLATION_FR)
+    nom = models.CharField(max_length=100, db_collation=COLLATION_FR)
+    prenom = models.CharField(max_length=60, db_collation=COLLATION_FR, blank=True, null=True)
+    email = models.EmailField(unique=True, max_length=200, db_collation=COLLATION_FR)
+    password = models.CharField(max_length=255, db_collation=COLLATION_FR)
+    telephone = models.CharField(max_length=30, db_collation=COLLATION_FR, blank=True, null=True)
     date_prise_poste = models.DateTimeField(blank=True, null=True)
     actif = models.BooleanField(default=True)
 
@@ -22,7 +27,7 @@ class Utilisateur(models.Model):
 
 class Region(models.Model):
     id_region = models.IntegerField(primary_key=True)
-    nom_region = models.CharField(unique=True, max_length=100, db_collation='French_CI_AS')
+    nom_region = models.CharField(unique=True, max_length=100, db_collation=COLLATION_FR)
 
     class Meta:
         managed = False
@@ -33,10 +38,10 @@ class Region(models.Model):
 
 
 class Agence(models.Model):
-    id_agence = models.CharField(primary_key=True, max_length=30, db_collation='French_CI_AS')
-    nom_agence = models.CharField(max_length=100, db_collation='French_CI_AS', blank=True, null=True)
+    id_agence = models.CharField(primary_key=True, max_length=30, db_collation=COLLATION_FR)
+    nom_agence = models.CharField(max_length=100, db_collation=COLLATION_FR, blank=True, null=True)
     id_region = models.ForeignKey('Region', on_delete=models.PROTECT, db_column='id_region')
-    adresse = models.CharField(max_length=255, db_collation='French_CI_AS', blank=True, null=True)
+    adresse = models.CharField(max_length=255, db_collation=COLLATION_FR, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     actif = models.BooleanField(default=True)
@@ -75,8 +80,8 @@ class ChefRegionPermission(models.Model):
 
 
 class Categorie(models.Model):
-    id_categorie = models.CharField(primary_key=True, max_length=30, db_collation='French_CI_AS')
-    nom_categorie = models.CharField(unique=True, max_length=100, db_collation='French_CI_AS')
+    id_categorie = models.CharField(primary_key=True, max_length=30, db_collation=COLLATION_FR)
+    nom_categorie = models.CharField(unique=True, max_length=100, db_collation=COLLATION_FR)
 
     class Meta:
         managed = False
@@ -137,14 +142,14 @@ class CommercialPermissionAgence(models.Model):
 
 
 class Client(models.Model):
-    id_client = models.CharField(primary_key=True, max_length=30, db_collation='French_CI_AS')
-    prenom_client = models.CharField(max_length=100, db_collation='French_CI_AS', blank=True, null=True)
-    nom_client = models.CharField(max_length=100, db_collation='French_CI_AS')
+    id_client = models.CharField(primary_key=True, max_length=30, db_collation=COLLATION_FR)
+    prenom_client = models.CharField(max_length=100, db_collation=COLLATION_FR, blank=True, null=True)
+    nom_client = models.CharField(max_length=100, db_collation=COLLATION_FR)
     id_agence = models.ForeignKey(Agence, on_delete=models.PROTECT, db_column='id_agence', blank=True, null=True)
-    ville = models.CharField(max_length=50, db_collation='French_CI_AS', blank=True, null=True)
+    ville = models.CharField(max_length=50, db_collation=COLLATION_FR, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-    code_categorie = models.CharField(max_length=30, db_collation='French_CI_AS', blank=True, null=True)
+    code_categorie = models.CharField(max_length=30, db_collation=COLLATION_FR, blank=True, null=True)
     actif = models.BooleanField(default=True)
 
     class Meta:
@@ -157,7 +162,7 @@ class Client(models.Model):
 
 class Typevendeur(models.Model):
     id_type_vendeur = models.AutoField(primary_key=True)
-    libelle_type_vendeur = models.CharField(max_length=50, db_collation='French_CI_AS')
+    libelle_type_vendeur = models.CharField(max_length=50, db_collation=COLLATION_FR)
 
     class Meta:
         managed = False
@@ -168,12 +173,12 @@ class Typevendeur(models.Model):
 
 
 class Vendeur(models.Model):
-    id_vendeur = models.CharField(primary_key=True, max_length=30, db_collation='French_CI_AS')
-    nom_vendeur = models.CharField(max_length=100, db_collation='French_CI_AS')
-    prenom_vendeur = models.CharField(max_length=60, db_collation='French_CI_AS', blank=True, null=True)
+    id_vendeur = models.CharField(primary_key=True, max_length=30, db_collation=COLLATION_FR)
+    nom_vendeur = models.CharField(max_length=100, db_collation=COLLATION_FR)
+    prenom_vendeur = models.CharField(max_length=60, db_collation=COLLATION_FR, blank=True, null=True)
     id_type_vendeur = models.ForeignKey(Typevendeur, on_delete=models.PROTECT, db_column='id_type_vendeur')
     id_agence = models.ForeignKey(Agence, on_delete=models.PROTECT, db_column='id_agence', blank=True, null=True)
-    email = models.EmailField(unique=True, max_length=200, db_collation='French_CI_AS', blank=True, null=True)
+    email = models.EmailField(unique=True, max_length=200, db_collation=COLLATION_FR, blank=True, null=True)
     actif = models.BooleanField(default=True)
 
     class Meta:
@@ -185,12 +190,12 @@ class Vendeur(models.Model):
 
 
 class Produit(models.Model):
-    id_produit = models.CharField(primary_key=True, max_length=30, db_collation='French_CI_AS')
-    nom_produit = models.CharField(unique=True, max_length=100, db_collation='French_CI_AS')
+    id_produit = models.CharField(primary_key=True, max_length=30, db_collation=COLLATION_FR)
+    nom_produit = models.CharField(unique=True, max_length=100, db_collation=COLLATION_FR)
     id_categorie = models.ForeignKey(Categorie, on_delete=models.PROTECT, db_column='id_categorie')
     prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.CharField(max_length=500, db_collation='French_CI_AS', blank=True, null=True)
-    chemin_image = models.CharField(max_length=500, db_collation='French_CI_AS', blank=True, null=True)
+    description = models.CharField(max_length=500, db_collation=COLLATION_FR, blank=True, null=True)
+    chemin_image = models.CharField(max_length=500, db_collation=COLLATION_FR, blank=True, null=True)
     date_creation = models.DateTimeField(blank=True, null=True)
     actif = models.BooleanField(default=True)
 
@@ -215,7 +220,7 @@ class LigneVente(models.Model):
 
 
 class Vente(models.Model):
-    id_vente = models.CharField(primary_key=True, max_length=30, db_collation='French_CI_AS')
+    id_vente = models.CharField(primary_key=True, max_length=30, db_collation=COLLATION_FR)
     id_client = models.ForeignKey(Client, on_delete=models.PROTECT, db_column='id_client')
     date_vente = models.DateTimeField()
     id_vendeur = models.ForeignKey(Vendeur, on_delete=models.PROTECT, db_column='id_vendeur')

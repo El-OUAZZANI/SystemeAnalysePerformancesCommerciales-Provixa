@@ -94,29 +94,43 @@ WSGI_APPLICATION = 'provixa.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+# Mode démo (ex: déploiement Render de démonstration) : base SQLite recréée et
+# repeuplée avec des données factices à chaque démarrage du serveur (voir la
+# commande `init_demo` et son appel dans le Start Command). Activé via la
+# variable d'environnement DJANGO_MODE_DEMO=true ; en local, on garde la
+# connexion SQL Server habituelle.
+MODE_DEMO = os.environ.get('DJANGO_MODE_DEMO', 'false').lower() == 'true'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'mssql',
-        'NAME': 'Provixa',
-        'HOST': '.\\SQLEXPRESS',  # ← Ajoute \SQLEXPRESS pour SQL Server Express
-        'PORT': '',                        # ← Laisse vide (port 1433 par défaut)
-        'USER': '',                        # ← Laisse vide si Trusted Connection
-        'PASSWORD': '',                    # ← Laisse vide si Trusted Connection
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'Trusted_Connection': 'yes',   # ← Majuscule correcte
-            'TrustServerCertificate': 'yes',
-            'Connection Timeout': 30,      # ← Ajouter un timeout
-        },
+if MODE_DEMO:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db_demo.sqlite3',
+        }
     }
-}
+    # Les migrations de l'app 'commercial' figent French_CI_AS (collation SQL
+    # Server) dans leur état historique. On les désactive en mode démo : la
+    # commande `init_demo` crée elle-même les tables non gérées, et
+    # `migrate --run-syncdb` crée Signalement (seul modèle managed=True de
+    # l'app) directement depuis l'état actuel des modèles, sans collation.
+    MIGRATION_MODULES = {'commercial': None}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'mssql',
+            'NAME': 'Provixa',
+            'HOST': '.\\SQLEXPRESS',  # ← Ajoute \SQLEXPRESS pour SQL Server Express
+            'PORT': '',                        # ← Laisse vide (port 1433 par défaut)
+            'USER': '',                        # ← Laisse vide si Trusted Connection
+            'PASSWORD': '',                    # ← Laisse vide si Trusted Connection
+            'OPTIONS': {
+                'driver': 'ODBC Driver 17 for SQL Server',
+                'Trusted_Connection': 'yes',   # ← Majuscule correcte
+                'TrustServerCertificate': 'yes',
+                'Connection Timeout': 30,      # ← Ajouter un timeout
+            },
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators

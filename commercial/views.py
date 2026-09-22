@@ -108,7 +108,7 @@ def vue_connexion(request):
         'next': suivant,
         'erreur_contact': erreur_contact,
         'confirmation_contact': confirmation_contact,
-        'comptes_demo': COMPTES_DEMO if settings.DEBUG else None,
+        'comptes_demo': COMPTES_DEMO if (settings.DEBUG or settings.MODE_DEMO) else None,
     })
 
 
