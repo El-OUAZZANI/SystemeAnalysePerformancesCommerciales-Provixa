@@ -2,6 +2,7 @@
 Django==6.0.8
 django-mssql==1.8
 Faker==40.36.0
+gunicorn==26.2.0
 joblib==1.6.0
 mssql-django==1.7.4
 numpy==2.5.3
@@ -12,4 +13,5 @@ python-dotenv==1.2.3
 pytz==2026.3.post1
 sqlparse==0.5.5
 tzdata==2026.3
+whitenoise==6.12.0
 xgboost==3.4.1
