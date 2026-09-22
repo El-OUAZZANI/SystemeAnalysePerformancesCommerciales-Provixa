@@ -1,0 +1,338 @@
+{% load formatage %}
+<style>
+    .th-sort { user-select: none; white-space: nowrap; }
+    .th-sort .sort-icon { font-size: 0.75rem; opacity: 0.4; margin-left: 0.2rem; }
+    .th-sort:hover .sort-icon { opacity: 0.8; }
+</style>
+
+<!-- Graphe Top 5 produits -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Évolution des ventes — Top 5 produits (30 jours)</h5>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-primary active" id="btn-toggle-quantite">Quantité</button>
+            <button type="button" class="btn btn-outline-primary" id="btn-toggle-ca">CA</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div style="position: relative; height: 40vh; min-height: 280px;">
+            <canvas id="chartTopProduits"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2 mb-3">
+    <input type="text" id="recherche-produit" class="form-control" style="max-width: 250px;" placeholder="Rechercher un produit...">
+    <select id="filtre-categorie" class="form-select" style="max-width: 220px;">
+        <option value="">Toutes les catégories</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id_categorie }}">{{ cat.nom_categorie }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="card">
+    <table class="table table-hover mb-0" id="table-produits">
+        <thead>
+            <tr>
+                <th class="th-sort" data-sort="nom" data-type="text">Produit <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th>Catégorie</th>
+                <th class="th-sort" data-sort="prix" data-type="num">Prix unitaire <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th class="th-sort" data-sort="quantite" data-type="num">Quantité (semaine) <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th class="th-sort" data-sort="ca" data-type="num">CA (semaine) <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th class="th-sort" data-sort="tendance" data-type="num">Évolution <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th class="th-sort" data-sort="vendeurs" data-type="num">Vendeurs actifs (30j) <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in produits_data %}
+            <tr data-categorie="{{ p.id_categorie }}" data-nom="{{ p.nom_produit|lower }}"
+                data-prix="{{ p.prix_unitaire }}" data-quantite="{{ p.quantite_semaine }}"
+                data-ca="{{ p.ca_semaine }}" data-tendance="{{ p.tendance|default_if_none:'-999999' }}"
+                data-vendeurs="{{ p.nb_vendeurs }}"
+                onclick="ouvrirDetailProduit('{{ p.id_produit }}')" style="cursor: pointer;">
+                <td>
+                    {{ p.nom_produit }}
+                    {% if p.rotation_lente %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis ms-1" title="Rotation lente">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            {% if p.jamais_vendu %}Jamais vendu{% else %}{{ p.jours_inactif }} j sans vente{% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+                <td><span class="badge bg-light text-dark">{{ p.categorie }}</span></td>
+                <td>{{ p.prix_unitaire|montant_fr }} MAD</td>
+                <td>{{ p.quantite_semaine }}</td>
+                <td>{{ p.ca_semaine|montant_fr }} MAD</td>
+                <td>
+                    {% if p.tendance is None %}
+                        <span class="text-muted">—</span>
+                    {% elif p.tendance >= 0 %}
+                        <span class="text-success">↑ {{ p.tendance }}%</span>
+                    {% else %}
+                        <span class="text-danger">↓ {{ p.tendance }}%</span>
+                    {% endif %}
+                </td>
+                <td>{{ p.nb_vendeurs }}</td>
+                <td class="text-muted"><i class="bi bi-chevron-right"></i></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-4">Aucun produit trouvé.</td></tr>
+            {% endfor %}
+            <tr id="ligne-aucun-resultat" hidden>
+                <td colspan="8" class="text-center text-muted py-4">Aucun produit ne correspond à votre recherche.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // --- Filtres tableau existant ---
+    const recherche = document.getElementById('recherche-produit');
+    const filtreCategorie = document.getElementById('filtre-categorie');
+    const ligneAucunResultat = document.getElementById('ligne-aucun-resultat');
+    const lignes = document.querySelectorAll('#table-produits tbody tr[data-nom]');
+
+    function appliquerFiltres() {
+        const texte = recherche.value.toLowerCase();
+        const categorie = filtreCategorie.value;
+        let nbVisibles = 0;
+
+        lignes.forEach(ligne => {
+            const matchTexte = ligne.dataset.nom.includes(texte);
+            const matchCategorie = !categorie || ligne.dataset.categorie === categorie;
+            const visible = matchTexte && matchCategorie;
+            ligne.style.display = visible ? '' : 'none';
+            if (visible) nbVisibles++;
+        });
+
+        if (ligneAucunResultat) {
+            ligneAucunResultat.hidden = nbVisibles !== 0 || lignes.length === 0;
+        }
+    }
+
+    recherche.addEventListener('input', appliquerFiltres);
+    filtreCategorie.addEventListener('change', appliquerFiltres);
+
+    // --- Tri par colonne (clic sur l'en-tête) ---
+    const corpsTable = document.querySelector('#table-produits tbody');
+    let triActuel = { colonne: null, ascendant: true };
+
+    document.querySelectorAll('#table-produits th.th-sort').forEach(th => {
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', () => {
+            const colonne = th.dataset.sort;
+            const type = th.dataset.type;
+            const ascendant = (triActuel.colonne === colonne) ? !triActuel.ascendant : true;
+            triActuel = { colonne, ascendant };
+
+            const lignesTriables = Array.from(lignes);
+            lignesTriables.sort((a, b) => {
+                let va = a.dataset[colonne === 'nom' ? 'nom' : colonne];
+                let vb = b.dataset[colonne === 'nom' ? 'nom' : colonne];
+                if (type === 'num') {
+                    va = parseFloat(va) || 0;
+                    vb = parseFloat(vb) || 0;
+                    return ascendant ? va - vb : vb - va;
+                }
+                return ascendant ? va.localeCompare(vb) : vb.localeCompare(va);
+            });
+
+            lignesTriables.forEach(ligne => corpsTable.insertBefore(ligne, ligneAucunResultat));
+
+            document.querySelectorAll('#table-produits th.th-sort .sort-icon').forEach(icon => {
+                icon.className = 'bi bi-arrow-down-up sort-icon';
+            });
+            th.querySelector('.sort-icon').className = ascendant
+                ? 'bi bi-sort-up sort-icon'
+                : 'bi bi-sort-down sort-icon';
+        });
+    });
+
+    // --- Graphe Top 5 produits ---
+    const dataTopProduits = {{ graphe_top_produits_json|safe }};
+    const couleursTop = ['#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f'];
+
+    function construireDatasetsTopProduits(metrique) {
+        return dataTopProduits.produits.map((p, i) => ({
+            label: p.nom,
+            data: metrique === 'quantite' ? p.quantites : p.ca,
+            borderColor: couleursTop[i % couleursTop.length],
+            backgroundColor: couleursTop[i % couleursTop.length],
+            fill: false,
+            tension: 0.3,
+            pointRadius: 2,
+        }));
+    }
+
+    const ctxTopProduits = document.getElementById('chartTopProduits').getContext('2d');
+    let chartTopProduits = new Chart(ctxTopProduits, {
+        type: 'line',
+        data: {
+            labels: dataTopProduits.labels,
+            datasets: construireDatasetsTopProduits('quantite'),
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { tooltip: { mode: 'index', intersect: false } },
+            scales: { y: { beginAtZero: true } },
+        }
+    });
+
+    document.getElementById('btn-toggle-quantite').addEventListener('click', function() {
+        chartTopProduits.data.datasets = construireDatasetsTopProduits('quantite');
+        chartTopProduits.update();
+        this.classList.add('active');
+        document.getElementById('btn-toggle-ca').classList.remove('active');
+    });
+
+    document.getElementById('btn-toggle-ca').addEventListener('click', function() {
+        chartTopProduits.data.datasets = construireDatasetsTopProduits('ca');
+        chartTopProduits.update();
+        this.classList.add('active');
+        document.getElementById('btn-toggle-quantite').classList.remove('active');
+    });
+
+    // --- Fiche détail produit (modal au clic) ---
+    const detailProduits = {{ detail_produits_json|safe }};
+    let chartDetailProduit = null;
+    let produitCourantId = null;
+
+    window.ouvrirDetailProduit = function(idProduit) {
+        const infos = detailProduits.produits[idProduit];
+        if (!infos) return;
+
+        produitCourantId = idProduit;
+
+        document.getElementById('modalProduitNom').textContent = infos.nom;
+        document.getElementById('modalProduitCategoriePrix').textContent =
+            `${infos.categorie} — ${infos.prix_unitaire} MAD / unité`;
+
+        const ctx = document.getElementById('chartDetailProduit').getContext('2d');
+        if (chartDetailProduit) chartDetailProduit.destroy();
+        chartDetailProduit = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: detailProduits.labels,
+                datasets: [{
+                    label: 'Quantité',
+                    data: infos.quantites,
+                    borderColor: '#4e79a7',
+                    backgroundColor: '#4e79a7',
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 2,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: { y: { beginAtZero: true } },
+            }
+        });
+        document.getElementById('btn-modal-quantite').classList.add('active');
+        document.getElementById('btn-modal-ca').classList.remove('active');
+
+        const inputDate = document.getElementById('date-detail-produit');
+        const dates = detailProduits.dates_iso;
+        inputDate.min = dates[0];
+        inputDate.max = dates[dates.length - 1];
+        inputDate.value = dates[dates.length - 1];
+
+        afficherFenetre3Jours(idProduit, dates[dates.length - 1]);
+
+        new bootstrap.Modal(document.getElementById('modalDetailProduit')).show();
+    };
+
+    function afficherFenetre3Jours(idProduit, dateIso) {
+        const infos = detailProduits.produits[idProduit];
+        const dates = detailProduits.dates_iso;
+        const idx = dates.indexOf(dateIso);
+        const corps = document.getElementById('corps-fenetre-3jours');
+        corps.innerHTML = '';
+
+        if (idx === -1) return;
+
+        for (let i = Math.max(0, idx - 2); i <= idx; i++) {
+            const ligne = document.createElement('tr');
+            if (i === idx) ligne.classList.add('table-primary');
+            ligne.innerHTML = `
+                <td>${detailProduits.labels[i]}</td>
+                <td>${infos.quantites[i]}</td>
+                <td>${infos.ca[i].toFixed(2)} MAD</td>
+            `;
+            corps.appendChild(ligne);
+        }
+    }
+
+    document.getElementById('date-detail-produit').addEventListener('change', function() {
+        if (produitCourantId !== null) {
+            afficherFenetre3Jours(produitCourantId, this.value);
+        }
+    });
+
+    document.getElementById('btn-modal-quantite').addEventListener('click', function() {
+        const infos = detailProduits.produits[produitCourantId];
+        chartDetailProduit.data.datasets[0].data = infos.quantites;
+        chartDetailProduit.data.datasets[0].label = 'Quantité';
+        chartDetailProduit.update();
+        this.classList.add('active');
+        document.getElementById('btn-modal-ca').classList.remove('active');
+    });
+
+    document.getElementById('btn-modal-ca').addEventListener('click', function() {
+        const infos = detailProduits.produits[produitCourantId];
+        chartDetailProduit.data.datasets[0].data = infos.ca;
+        chartDetailProduit.data.datasets[0].label = 'CA';
+        chartDetailProduit.update();
+        this.classList.add('active');
+        document.getElementById('btn-modal-quantite').classList.remove('active');
+    });
+
+});
+</script>
+
+<!-- Modal détail produit -->
+<div class="modal fade" id="modalDetailProduit" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-0" id="modalProduitNom">—</h5>
+                    <small class="text-muted" id="modalProduitCategoriePrix">—</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Évolution 30 jours</h6>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="btn-modal-quantite">Quantité</button>
+                        <button type="button" class="btn btn-outline-primary" id="btn-modal-ca">CA</button>
+                    </div>
+                </div>
+                <div style="position: relative; height: 35vh; min-height: 220px;">
+                    <canvas id="chartDetailProduit"></canvas>
+                </div>
+
+                <hr>
+
+                <h6>Voir un jour précis</h6>
+                <input type="date" id="date-detail-produit" class="form-control mb-3" style="max-width: 220px;">
+
+                <table class="table table-sm" id="table-fenetre-3jours">
+                    <thead>
+                        <tr><th>Date</th><th>Quantité</th><th>CA</th></tr>
+                    </thead>
+                    <tbody id="corps-fenetre-3jours"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

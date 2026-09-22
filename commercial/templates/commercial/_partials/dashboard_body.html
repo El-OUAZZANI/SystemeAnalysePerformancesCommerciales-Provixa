@@ -1,0 +1,503 @@
+<style>
+    .kpi-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.9rem;
+        padding: 1.1rem 1.25rem;
+    }
+    .kpi-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.65rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    .kpi-icon.blue   { background: #e8f0ff; color: #3d7dfc; }
+    .kpi-icon.green  { background: #e6f7ee; color: #17a673; }
+    .kpi-icon.purple { background: #f1eaff; color: #7c4dff; }
+    .kpi-icon.orange { background: #fff2e0; color: #f5920a; }
+
+    .kpi-body { flex-grow: 1; }
+    .kpi-label { font-size: 0.82rem; color: #6b7280; margin-bottom: 0.15rem; }
+    .kpi-value { font-size: 1.7rem; font-weight: 700; color: #111827; line-height: 1.1; }
+
+    .kpi-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        margin-top: 0.35rem;
+        padding: 0.1rem 0.45rem;
+        border-radius: 999px;
+    }
+    .kpi-trend.up   { color: #17a673; background: #e6f7ee; }
+    .kpi-trend.down { color: #e5484d; background: #fdecec; }
+    .kpi-trend.flat { color: #6b7280; background: #f3f4f6; }
+
+    .kpi-caption {
+        display: block;
+        font-size: 0.78rem;
+        color: #9ca3af;
+        margin-top: 0.35rem;
+    }
+
+    .rotation-lente-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .rotation-lente-item:last-child { border-bottom: none; }
+
+    .rank-badge {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #f3f4f6;
+        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .indicateur-actualisation {
+        font-size: 0.78rem;
+        color: #9ca3af;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .indicateur-actualisation .point {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: #17a673; flex-shrink: 0;
+        animation: pouls 1.8s ease-in-out infinite;
+    }
+    @keyframes pouls {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.35; }
+    }
+</style>
+
+{% if url_actualisation %}
+<div class="d-flex justify-content-end mb-2">
+    <span class="indicateur-actualisation">
+        <span class="point"></span>
+        Actualisé à <span id="heureActualisation">…</span>
+    </span>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg">
+        <div class="card kpi-card h-100">
+            <div class="kpi-icon blue"><i class="bi bi-box-seam"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Quantité vendue (semaine)</div>
+                <div class="kpi-value" id="kpiQuantite">{{ quantite_totale }}</div>
+                <span class="kpi-trend {% if tendance_quantite > 0 %}up{% elif tendance_quantite < 0 %}down{% else %}flat{% endif %}"
+                      id="kpiQuantiteTrend" {% if tendance_quantite is None %}hidden{% endif %}>
+                    <i class="bi {% if tendance_quantite > 0 %}bi-arrow-up{% elif tendance_quantite < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
+                    {{ tendance_quantite|default:0 }}%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg">
+        <div class="card kpi-card h-100">
+            <div class="kpi-icon orange"><i class="bi bi-cash-stack"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">CA (semaine)</div>
+                <div class="kpi-value" id="kpiCa">{{ ca_semaine|floatformat:0 }} DH</div>
+                <span class="kpi-trend {% if tendance_ca > 0 %}up{% elif tendance_ca < 0 %}down{% else %}flat{% endif %}"
+                      id="kpiCaTrend" {% if tendance_ca is None %}hidden{% endif %}>
+                    <i class="bi {% if tendance_ca > 0 %}bi-arrow-up{% elif tendance_ca < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
+                    {{ tendance_ca|default:0 }}%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg">
+        <div class="card kpi-card h-100">
+            <div class="kpi-icon green"><i class="bi bi-receipt"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Ventes (semaine)</div>
+                <div class="kpi-value" id="kpiVentes">{{ nb_ventes_semaine }}</div>
+                <span class="kpi-trend {% if tendance_ventes > 0 %}up{% elif tendance_ventes < 0 %}down{% else %}flat{% endif %}"
+                      id="kpiVentesTrend" {% if tendance_ventes is None %}hidden{% endif %}>
+                    <i class="bi {% if tendance_ventes > 0 %}bi-arrow-up{% elif tendance_ventes < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
+                    {{ tendance_ventes|default:0 }}%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg">
+        <div class="card kpi-card h-100">
+            <div class="kpi-icon purple"><i class="bi bi-people"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Vendeurs actifs</div>
+                <div class="kpi-value" id="kpiVendeursActifs">{{ nb_vendeurs_actifs }}</div>
+                <span class="kpi-caption" id="kpiVendeursCaption">{{ nb_vendeurs_engages_semaine }} ont vendu cette semaine</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg">
+        <div class="card kpi-card h-100">
+            <div class="kpi-icon orange"><i class="bi bi-shop"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Clients actifs</div>
+                <div class="kpi-value" id="kpiClientsActifs">{{ nb_clients_actifs }}</div>
+                <span class="kpi-caption" id="kpiClientsCaption">{{ nb_clients_desservis_semaine }} desservis cette semaine</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3 mb-4">
+    <h5>Tendance des ventes (30 derniers jours)</h5>
+    <div style="position: relative; height: 40vh; min-height: 260px;">
+        <canvas id="graphiqueTendance"></canvas>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card p-3 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">Top 5 vendeurs (semaine)</h5>
+                {% if lien_vendeurs_url %}
+                <a href="{{ lien_vendeurs_url }}" class="small text-decoration-none">
+                    Voir tout <i class="bi bi-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+            <div id="topVendeursListe">
+                {% if top_vendeurs %}
+                    <ul class="list-unstyled mb-0">
+                        {% for v in top_vendeurs %}
+                            <li class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span><span class="rank-badge">{{ forloop.counter }}</span>{{ v.nom }}</span>
+                                    <strong>{{ v.quantite }}</strong>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar" style="width: {{ v.pourcentage }}%; background-color: #3d7dfc;"></div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Aucune vente cette semaine.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card p-3 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">Top 5 produits (semaine)</h5>
+                {% if lien_produits_url %}
+                <a href="{{ lien_produits_url }}" class="small text-decoration-none">
+                    Voir tout <i class="bi bi-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+            <div id="topProduitsListe">
+                {% if top_produits %}
+                    <ul class="list-unstyled mb-0">
+                        {% for p in top_produits %}
+                            <li class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span><span class="rank-badge">{{ forloop.counter }}</span>{{ p.nom }}</span>
+                                    <strong>{{ p.quantite }}</strong>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar" style="width: {{ p.pourcentage }}%; background-color: #17a673;"></div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Aucune vente cette semaine.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3">
+    <h5 class="mb-1">Produits à rotation lente</h5>
+    <p class="text-muted small mb-2">Actifs, sans aucune vente depuis {{ seuil_rotation_lente_jours }} jours ou plus</p>
+    <div id="rotationLenteListe">
+        {% if produits_rotation_lente %}
+            {% for produit in produits_rotation_lente %}
+                <div class="rotation-lente-item">
+                    <span><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>{{ produit.nom_produit }}</span>
+                    {% if produit.jamais_vendu %}
+                        <span class="badge bg-secondary-subtle text-secondary">Jamais vendu</span>
+                    {% else %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis">{{ produit.jours_inactif }} j sans vente</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted mb-0">Aucune alerte pour le moment.</p>
+        {% endif %}
+    </div>
+</div>
+
+
+<script>
+const ctx = document.getElementById('graphiqueTendance');
+
+// dégradé bleu sous la courbe
+const degrade = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
+degrade.addColorStop(0, 'rgba(61, 125, 252, 0.28)');
+degrade.addColorStop(1, 'rgba(61, 125, 252, 0)');
+
+let caParJour = {{ valeurs_graphique_ca|safe }};
+let labelsComplets = {{ labels_graphique_complet|safe }};
+
+// --- plugin maison : ligne verticale (crosshair) au survol ---
+const crosshairPlugin = {
+    id: 'crosshair',
+    afterDatasetsDraw(chart) {
+        const active = chart.getActiveElements();
+        if (!active || !active.length) return;
+        const { ctx, chartArea } = chart;
+        const x = active[0].element.x;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(61, 125, 252, 0.35)';
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.restore();
+    }
+};
+
+const graphiqueTendance = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ labels_graphique|safe }},
+        datasets: [{
+            label: 'Quantité vendue',
+            data: {{ valeurs_graphique|safe }},
+            borderColor: '#3d7dfc',
+            backgroundColor: degrade,
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2.5,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#3d7dfc',
+            pointHoverBorderColor: '#fff',
+            pointHoverBorderWidth: 2,
+        }]
+    },
+    plugins: [crosshairPlugin],
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        animation: {
+            duration: 600,
+            easing: 'easeOutQuart',
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                enabled: true,
+                mode: 'index',
+                intersect: false,
+                backgroundColor: '#111827',
+                titleColor: '#ffffff',
+                titleFont: { size: 13, weight: '600' },
+                bodyColor: '#e5e7eb',
+                bodyFont: { size: 12 },
+                padding: 12,
+                cornerRadius: 10,
+                displayColors: false,
+                caretSize: 6,
+                callbacks: {
+                    title: function(items) {
+                        const idx = items[0].dataIndex;
+                        return labelsComplets[idx];
+                    },
+                    label: function(context) {
+                        const jourIndex = context.dataIndex;
+                        const qte = context.parsed.y;
+                        const ca = caParJour[jourIndex];
+                        return [
+                            `Quantité vendue : ${qte}`,
+                            `CA : ${ca.toLocaleString('fr-FR')} DH`,
+                        ];
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: '#f0f1f5' },
+                ticks: { color: '#9ca3af', font: { size: 11 } },
+            },
+            x: {
+                grid: { display: false },
+                ticks: {
+                    autoSkip: false,
+                    maxRotation: 60,
+                    minRotation: 0,
+                    color: '#9ca3af',
+                    font: { size: 10 },
+                },
+            },
+        },
+    }
+});
+
+// ============================================================
+// Actualisation automatique (sans rechargement de page)
+// ============================================================
+const urlActualisation = "{{ url_actualisation|default:'' }}";
+
+if (urlActualisation) {
+    const DELAI_ACTUALISATION_MS = 30000; // 30 secondes
+
+    function echapperHtml(texte) {
+        const div = document.createElement('div');
+        div.textContent = texte ?? '';
+        return div.innerHTML;
+    }
+
+    function appliquerTendance(spanEl, iconEl, valeur) {
+        if (valeur === null || valeur === undefined) {
+            spanEl.hidden = true;
+            return;
+        }
+        spanEl.hidden = false;
+        spanEl.classList.remove('up', 'down', 'flat');
+        iconEl.classList.remove('bi-arrow-up', 'bi-arrow-down', 'bi-dash');
+        if (valeur > 0) {
+            spanEl.classList.add('up');
+            iconEl.classList.add('bi-arrow-up');
+        } else if (valeur < 0) {
+            spanEl.classList.add('down');
+            iconEl.classList.add('bi-arrow-down');
+        } else {
+            spanEl.classList.add('flat');
+            iconEl.classList.add('bi-dash');
+        }
+        spanEl.lastChild.textContent = ` ${valeur ?? 0}%`;
+    }
+
+    function construireListeClassement(items, couleurBarre) {
+        if (!items || !items.length) {
+            return '<p class="text-muted mb-0">Aucune vente cette semaine.</p>';
+        }
+        return '<ul class="list-unstyled mb-0">' + items.map((item, i) => `
+            <li class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span><span class="rank-badge">${i + 1}</span>${echapperHtml(item.nom)}</span>
+                    <strong>${item.quantite}</strong>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar" style="width: ${item.pourcentage}%; background-color: ${couleurBarre};"></div>
+                </div>
+            </li>`).join('') + '</ul>';
+    }
+
+    function construireRotationLente(items) {
+        if (!items || !items.length) {
+            return '<p class="text-muted mb-0">Aucune alerte pour le moment.</p>';
+        }
+        return items.map(p => `
+            <div class="rotation-lente-item">
+                <span><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>${echapperHtml(p.nom_produit)}</span>
+                ${p.jamais_vendu
+                    ? '<span class="badge bg-secondary-subtle text-secondary">Jamais vendu</span>'
+                    : `<span class="badge bg-warning-subtle text-warning-emphasis">${p.jours_inactif} j sans vente</span>`}
+            </div>`).join('');
+    }
+
+    async function actualiserDashboard() {
+        try {
+            const reponse = await fetch(urlActualisation, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!reponse.ok) return; // session expirée, agence retirée... on retente au prochain cycle
+            const data = await reponse.json();
+
+            // --- KPIs ---
+            document.getElementById('kpiQuantite').textContent = data.quantite_totale;
+            appliquerTendance(
+                document.getElementById('kpiQuantiteTrend'),
+                document.querySelector('#kpiQuantiteTrend i'),
+                data.tendance_quantite,
+            );
+
+            document.getElementById('kpiCa').textContent = `${Math.round(data.ca_semaine)} DH`;
+            appliquerTendance(
+                document.getElementById('kpiCaTrend'),
+                document.querySelector('#kpiCaTrend i'),
+                data.tendance_ca,
+            );
+
+            document.getElementById('kpiVentes').textContent = data.nb_ventes_semaine;
+            appliquerTendance(
+                document.getElementById('kpiVentesTrend'),
+                document.querySelector('#kpiVentesTrend i'),
+                data.tendance_ventes,
+            );
+
+            document.getElementById('kpiVendeursActifs').textContent = data.nb_vendeurs_actifs;
+            document.getElementById('kpiVendeursCaption').textContent = `${data.nb_vendeurs_engages_semaine} ont vendu cette semaine`;
+
+            document.getElementById('kpiClientsActifs').textContent = data.nb_clients_actifs;
+            document.getElementById('kpiClientsCaption').textContent = `${data.nb_clients_desservis_semaine} desservis cette semaine`;
+
+            // --- Classements ---
+            document.getElementById('topVendeursListe').innerHTML = construireListeClassement(data.top_vendeurs, '#3d7dfc');
+            document.getElementById('topProduitsListe').innerHTML = construireListeClassement(data.top_produits, '#17a673');
+            document.getElementById('rotationLenteListe').innerHTML = construireRotationLente(data.produits_rotation_lente);
+
+            // --- Graphique (30 derniers jours) ---
+            caParJour = data.valeurs_graphique_ca;
+            labelsComplets = data.labels_graphique_complet;
+            graphiqueTendance.data.labels = data.labels_graphique;
+            graphiqueTendance.data.datasets[0].data = data.valeurs_graphique;
+            graphiqueTendance.update();
+
+            // --- Horodatage ---
+            const heureEl = document.getElementById('heureActualisation');
+            if (heureEl) heureEl.textContent = new Date().toLocaleTimeString('fr-FR');
+        } catch (erreur) {
+            // Coupure réseau ponctuelle : on retente simplement au prochain cycle,
+            // sans casser l'affichage déjà à l'écran.
+            console.warn('Actualisation dashboard : échec de la requête', erreur);
+        }
+    }
+
+    // Affiche l'heure de chargement immédiatement (sans attendre le premier cycle de 30s)
+    const heureInitEl = document.getElementById('heureActualisation');
+    if (heureInitEl) heureInitEl.textContent = new Date().toLocaleTimeString('fr-FR');
+
+    setInterval(actualiserDashboard, DELAI_ACTUALISATION_MS);
+}
+</script>

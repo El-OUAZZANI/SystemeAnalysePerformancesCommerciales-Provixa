@@ -1,0 +1,10 @@
+{% extends 'commercial/chef_region/base.html' %}
+
+{% block titre %}Prévision des ventes — {{ region.nom_region }}{% endblock %}
+
+{% block contenu %}
+<h1 class="mb-1">Prévision des ventes</h1>
+<p class="text-muted mb-4">Région {{ region.nom_region }} — {{ agence.nom_agence|default:agence.id_agence }}</p>
+
+{% include 'commercial/_partials/previsions_body.html' %}
+{% endblock %}

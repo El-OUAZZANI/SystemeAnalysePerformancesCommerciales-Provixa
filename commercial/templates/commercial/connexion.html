@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion — Provixa</title>
+    <link rel="icon" type="image/png" href="{% static 'commercial/logo-icon.png' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        {% include 'commercial/_partials/style_auth.html' %}
+    </style>
+</head>
+<body>
+    <div class="fond-flou"></div>
+    <div class="voile"></div>
+
+    <div class="carte-connexion">
+        <div class="marque">
+            <img src="{% static 'commercial/logo-icon.png' %}" alt="" class="logo-marque">
+            <div class="nom">Provixa</div>
+            <div class="sous-titre">Système d'analyse des performances commerciales</div>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-success py-2 small d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-check-circle-fill"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if erreur %}
+        <div class="alert alert-danger py-2 small d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <span>{{ erreur }}</span>
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control" required autofocus
+                       placeholder="vous@provixa.ma" value="{{ email_saisi }}">
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Mot de passe</label>
+                <input type="password" name="mot_de_passe" class="form-control" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="btn btn-connexion w-100">
+                <i class="bi bi-box-arrow-in-right me-1"></i>Se connecter
+            </button>
+        </form>
+
+        {% if comptes_demo %}
+        <div class="alert alert-warning py-2 small mt-3 mb-0" role="alert">
+            <div class="fw-semibold mb-1">
+                <i class="bi bi-flask me-1"></i>Comptes de démonstration (dev uniquement)
+            </div>
+            {% for compte in comptes_demo %}
+            <div class="d-flex justify-content-between align-items-center py-1">
+                <span>{{ compte.role }} — <code>{{ compte.email }}</code></span>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 btn-suggestion-compte"
+                        data-email="{{ compte.email }}" data-mot-de-passe="{{ compte.mot_de_passe }}">
+                    Remplir
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="text-center mt-3">
+            <button class="btn btn-link btn-sm text-decoration-none lien-aide" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#formContactAdmin">
+                <i class="bi bi-question-circle me-1"></i>Un problème pour vous connecter ?
+            </button>
+        </div>
+
+        <div class="collapse mt-2" id="formContactAdmin">
+            <hr>
+            {% if confirmation_contact %}
+            <div class="alert alert-success py-2 small d-flex align-items-center gap-2" role="alert">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>{{ confirmation_contact }}</span>
+            </div>
+            {% else %}
+            {% if erreur_contact %}
+            <div class="alert alert-danger py-2 small d-flex align-items-center gap-2" role="alert">
+                <i class="bi bi-exclamation-circle-fill"></i>
+                <span>{{ erreur_contact }}</span>
+            </div>
+            {% endif %}
+            <p class="text-muted small mb-2">
+                Décrivez votre problème (mot de passe oublié, compte désactivé, email inconnu...),
+                un administrateur vous recontactera.
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form" value="contact_admin">
+                <div class="mb-2">
+                    <label class="form-label">Votre email</label>
+                    <input type="email" name="email_contact" class="form-control form-control-sm"
+                           placeholder="vous@provixa.ma" required>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Message</label>
+                    <textarea name="message_contact" class="form-control form-control-sm" rows="3" required
+                              placeholder="Décrivez votre problème de connexion..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="bi bi-send-fill me-1"></i>Envoyer à l'administrateur
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="pied">
+            Accès réservé au personnel Provixa
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Rouvre automatiquement le bloc contact si son formulaire vient d'être soumis
+        {% if erreur_contact or confirmation_contact %}
+        new bootstrap.Collapse(document.getElementById('formContactAdmin'), { show: true });
+        {% endif %}
+
+        // Pré-remplit le formulaire de connexion avec un compte de démonstration
+        document.querySelectorAll('.btn-suggestion-compte').forEach(function (bouton) {
+            bouton.addEventListener('click', function () {
+                document.querySelector('input[name="email"]').value = bouton.dataset.email;
+                document.querySelector('input[name="mot_de_passe"]').value = bouton.dataset.motDePasse;
+            });
+        });
+    </script>
+</body>
+</html>

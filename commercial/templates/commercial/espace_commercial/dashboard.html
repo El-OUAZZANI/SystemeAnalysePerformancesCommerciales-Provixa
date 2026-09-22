@@ -1,0 +1,11 @@
+{% extends 'commercial/espace_commercial/base.html' %}
+
+{% block titre %}{{ agence.nom_agence }} — Provixa{% endblock %}
+
+{% block contenu %}
+<h1 class="mb-1">{{ agence.nom_agence|default:agence.id_agence }}</h1>
+<p class="text-muted mb-3">{{ agence.id_region.nom_region }} — {{ date_aujourdhui_fr }}</p>
+
+{% include 'commercial/_partials/onglets_agence.html' %}
+{% include 'commercial/_partials/dashboard_body.html' %}
+{% endblock %}

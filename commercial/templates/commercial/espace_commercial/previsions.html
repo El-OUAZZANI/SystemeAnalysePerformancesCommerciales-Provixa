@@ -1,0 +1,11 @@
+{% extends 'commercial/espace_commercial/base.html' %}
+
+{% block titre %}Prévisions — {{ agence.nom_agence }}{% endblock %}
+
+{% block contenu %}
+<h1 class="mb-1">{{ agence.nom_agence|default:agence.id_agence }}</h1>
+<p class="text-muted mb-3">Prévision des ventes des {{ horizon_jours }} prochains jours</p>
+
+{% include 'commercial/_partials/onglets_agence.html' %}
+{% include 'commercial/_partials/previsions_body.html' %}
+{% endblock %}

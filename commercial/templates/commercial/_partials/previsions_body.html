@@ -1,0 +1,192 @@
+<style>
+    /* Styles KPI/rank-badge partagés avec dashboard_body.html (dupliqués ici
+       car cette section n'inclut pas dashboard_body.html). */
+    .kpi-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.9rem;
+        padding: 1.1rem 1.25rem;
+    }
+    .kpi-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 0.65rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    .kpi-icon.blue   { background: #e8f0ff; color: #3d7dfc; }
+    .kpi-icon.green  { background: #e6f7ee; color: #17a673; }
+    .kpi-icon.purple { background: #f1eaff; color: #7c4dff; }
+    .kpi-icon.orange { background: #fff2e0; color: #f5920a; }
+
+    .kpi-body { flex-grow: 1; }
+    .kpi-label { font-size: 0.82rem; color: #6b7280; margin-bottom: 0.15rem; }
+    .kpi-value { font-size: 1.7rem; font-weight: 700; color: #111827; line-height: 1.1; }
+    .kpi-caption {
+        display: block;
+        font-size: 0.78rem;
+        color: #9ca3af;
+        margin-top: 0.35rem;
+    }
+
+    .rank-badge {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #f3f4f6;
+        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .prevision-info {
+        background: #f1eaff;
+        border: 1px solid #e4d6ff;
+        border-radius: 0.65rem;
+        padding: 0.85rem 1.1rem;
+        font-size: 0.85rem;
+        color: #4c2e8f;
+        display: flex;
+        gap: 0.6rem;
+        align-items: flex-start;
+    }
+    .prevision-info i { font-size: 1.1rem; margin-top: 0.1rem; }
+</style>
+
+<div class="prevision-info mb-4">
+    <i class="bi bi-info-circle-fill"></i>
+    <div>
+        Prévision générée par le modèle <strong>XGBoost</strong> (le plus performant en validation croisée,
+        MAE moyen national ≈ 4,7 unités/produit/jour). Les ventes sont prévues à l'échelle nationale puis
+        réparties sur ce périmètre au prorata de son poids historique récent
+        (<strong>{{ poids_perimetre_pct }}%</strong> des ventes nationales sur les 60 derniers jours) —
+        à considérer comme une tendance indicative, pas une valeur exacte garantie.
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-4">
+        <div class="card kpi-card h-100">
+            <div class="kpi-icon purple"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Ventes prévues ({{ horizon_jours }} jours)</div>
+                <div class="kpi-value">{{ total_prevu_horizon }}</div>
+                <span class="kpi-caption">unités, tous produits confondus</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-4">
+        <div class="card kpi-card h-100">
+            <div class="kpi-icon blue"><i class="bi bi-calendar-week"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Moyenne prévue / jour</div>
+                <div class="kpi-value">{{ moyenne_prevue_jour }}</div>
+                <span class="kpi-caption">unités par jour</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-4">
+        <div class="card kpi-card h-100">
+            <div class="kpi-icon orange"><i class="bi bi-pie-chart-fill"></i></div>
+            <div class="kpi-body">
+                <div class="kpi-label">Poids de ce périmètre</div>
+                <div class="kpi-value">{{ poids_perimetre_pct }}%</div>
+                <span class="kpi-caption">des ventes nationales</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3 mb-4">
+    <h5 class="mb-1">Ventes prévues — {{ horizon_jours }} prochains jours</h5>
+    <p class="text-muted small mb-2">À partir du {{ date_depart_prevision|date:"d/m/Y" }}</p>
+    <div style="position: relative; height: 40vh; min-height: 260px;">
+        <canvas id="graphiquePrevision"></canvas>
+    </div>
+</div>
+
+<div class="card p-3">
+    <h5 class="mb-2">Top 10 produits — quantité prévue sur {{ horizon_jours }} jours</h5>
+    {% if top_produits_prevus %}
+        <ul class="list-unstyled mb-0">
+            {% for p in top_produits_prevus %}
+                <li class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span><span class="rank-badge">{{ forloop.counter }}</span>{{ p.nom }}</span>
+                        <strong>{{ p.quantite_predite }}</strong>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar" style="width: {{ p.pourcentage }}%; background-color: #7c4dff;"></div>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted mb-0">Pas assez d'historique pour ce périmètre pour établir une prévision.</p>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    const ctx = document.getElementById('graphiquePrevision');
+    const labelsComplets = {{ labels_prevision_complet|safe }};
+
+    const graphiquePrevision = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ labels_prevision|safe }},
+            datasets: [{
+                label: 'Quantité prévue',
+                data: {{ valeurs_prevision|safe }},
+                backgroundColor: 'rgba(124, 77, 255, 0.65)',
+                hoverBackgroundColor: '#7c4dff',
+                borderRadius: 6,
+                maxBarThickness: 36,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#111827',
+                    titleColor: '#ffffff',
+                    titleFont: { size: 13, weight: '600' },
+                    bodyColor: '#e5e7eb',
+                    bodyFont: { size: 12 },
+                    padding: 12,
+                    cornerRadius: 10,
+                    displayColors: false,
+                    callbacks: {
+                        title: function (items) { return labelsComplets[items[0].dataIndex]; },
+                        label: function (context) { return `Quantité prévue : ${context.parsed.y}`; },
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f0f1f5' },
+                    ticks: { color: '#9ca3af', font: { size: 11 } },
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#9ca3af', font: { size: 10 } },
+                },
+            },
+        }
+    });
+})();
+</script>

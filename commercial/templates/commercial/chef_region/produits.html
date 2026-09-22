@@ -1,0 +1,10 @@
+{% extends 'commercial/chef_region/base.html' %}
+{% load formatage %}
+
+{% block contenu %}
+<h1 class="mb-1">Produits</h1>
+<p class="text-muted mb-1">{{ produits_data|length }} produit(s) actif(s)</p>
+<p class="fs-5 fw-semibold mb-4">Chiffre d'affaires cette semaine : {{ ca_total_semaine|montant_fr }} MAD</p>
+
+{% include 'commercial/_partials/produits_body.html' %}
+{% endblock %}

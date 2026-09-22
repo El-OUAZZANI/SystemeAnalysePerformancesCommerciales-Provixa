@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titre %}Provixa{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'commercial/logo-icon.png' %}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        {% include 'commercial/_partials/styles_communs.html' %}
+
+        .sidebar-nav .nav-link .agence-region {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--text-muted-sidebar);
+            font-weight: 400;
+        }
+        .sidebar-nav .nav-link.active .agence-region { color: rgba(255,255,255,0.8); }
+    </style>
+</head>
+<body>
+    <button class="sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open'); document.querySelector('.sidebar-overlay').classList.toggle('open');">
+    <i class="bi bi-list"></i>
+</button>
+<div class="sidebar-overlay" onclick="this.classList.remove('open'); document.querySelector('.sidebar').classList.remove('open');"></div>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-name">Provixa</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a class="nav-link {% if section_active == 'vue_ensemble' %}active{% endif %}"
+               href="{% url 'commercial:vue_ensemble_commercial' %}">
+                <i class="bi bi-bar-chart-line-fill"></i> Vue d'ensemble
+            </a>
+
+            <div class="sidebar-nav-label">Mes agences</div>
+            {% for agence in agences_commercial %}
+            <a class="nav-link {% if agence_active_id == agence.id_agence %}active{% endif %}"
+               href="{% url 'commercial:dashboard_agence_commercial' agence.id_agence %}">
+                <i class="bi bi-shop"></i>
+                <span>
+                    {{ agence.nom_agence|default:agence.id_agence }}
+                    <span class="agence-region">{{ agence.id_region.nom_region }}</span>
+                </span>
+            </a>
+            {% empty %}
+            <p class="text-muted small px-2">Aucune agence assignée.</p>
+            {% endfor %}
+
+            <div class="sidebar-nav-label">Compte</div>
+            <a class="nav-link {% if section_active == 'parametres' %}active{% endif %}"
+               href="{% url 'commercial:parametres_commercial' %}">
+                <i class="bi bi-gear-fill"></i> Paramètres
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="avatar">
+                {{ commercial.id_commercial.prenom|slice:":1" }}{{ commercial.id_commercial.nom|slice:":1" }}
+            </div>
+            <div class="info flex-grow-1">
+                <div>{{ commercial.id_commercial.prenom }} {{ commercial.id_commercial.nom }}</div>
+                <small>Commercial</small>
+            </div>
+            <a href="{% url 'commercial:deconnexion' %}" class="text-decoration-none" style="color: var(--text-muted-sidebar);" title="Déconnexion">
+                <i class="bi bi-box-arrow-right fs-5"></i>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        {% block contenu %}{% endblock %}
+    </main>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

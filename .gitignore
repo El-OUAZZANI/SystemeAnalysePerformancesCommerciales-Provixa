@@ -1,0 +1,15 @@
+# Environnement virtuel
+env/
+
+# Secrets locaux (identifiants email, SECRET_KEY de prod, etc.)
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Django
+*.log
+
+# Outils locaux (non liés au projet)
+.claude/

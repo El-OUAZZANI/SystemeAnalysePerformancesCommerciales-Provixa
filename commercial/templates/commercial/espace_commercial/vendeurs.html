@@ -1,0 +1,158 @@
+{% extends 'commercial/espace_commercial/base.html' %}
+{% load formatage %}
+
+{% block titre %}Vendeurs — {{ agence.nom_agence }}{% endblock %}
+
+{% block contenu %}
+<h1 class="mb-1">{{ agence.nom_agence|default:agence.id_agence }}</h1>
+<p class="text-muted mb-3">{{ vendeurs_data|length }} vendeur(s) dans cette agence</p>
+
+{% include 'commercial/_partials/onglets_agence.html' %}
+
+<style>
+    .th-sort { user-select: none; white-space: nowrap; }
+    .th-sort .sort-icon { font-size: 0.75rem; opacity: 0.4; margin-left: 0.2rem; }
+    .th-sort:hover .sort-icon { opacity: 0.8; }
+</style>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <input type="text" id="recherche-vendeur" class="form-control" style="max-width: 250px;" placeholder="Rechercher un vendeur...">
+    <select id="filtre-type" class="form-select" style="max-width: 200px;">
+        <option value="">Tous les types</option>
+        <option value="prévendeur">Prévendeur</option>
+        <option value="conventionnel">Vendeur conventionnel</option>
+    </select>
+    <select id="filtre-statut" class="form-select" style="max-width: 160px;">
+        <option value="">Tous les statuts</option>
+        <option value="actif">Actif</option>
+        <option value="inactif">Inactif</option>
+    </select>
+</div>
+
+<div class="card">
+    <table class="table table-hover mb-0" id="table-vendeurs">
+        <thead>
+            <tr>
+                <th class="th-sort" data-sort="nom" data-type="text">Vendeur <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th class="th-sort" data-sort="type" data-type="text">Type <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th>Statut</th>
+                <th class="th-sort" data-sort="quantite" data-type="num">Quantité (semaine) <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th class="th-sort" data-sort="ca" data-type="num">CA (semaine) <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th class="th-sort" data-sort="tendance" data-type="num">Évolution <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                <th class="th-sort" data-sort="clients" data-type="num">Clients desservis (30j) <i class="bi bi-arrow-down-up sort-icon"></i></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in vendeurs_data %}
+            <tr data-type="{{ v.type_vendeur|lower }}" data-nom="{{ v.nom_complet|lower }}"
+                data-statut="{% if v.actif %}actif{% else %}inactif{% endif %}"
+                data-quantite="{{ v.quantite_semaine }}"
+                data-ca="{{ v.ca_semaine }}" data-tendance="{{ v.tendance|default_if_none:'-999999' }}"
+                data-clients="{{ v.nb_clients }}">
+                <td>
+                    {{ v.nom_complet }}
+                    {% if v.inactif %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis ms-1" title="Vendeur inactif">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            {% if v.jamais_vendu %}Jamais vendu{% else %}{{ v.jours_inactif }} j sans vente{% endif %}
+                        </span>
+                    {% endif %}
+                </td>
+                <td><span class="badge bg-light text-dark">{{ v.type_vendeur }}</span></td>
+                <td>
+                    {% if v.actif %}
+                        <span class="badge bg-success-subtle text-success">Actif</span>
+                    {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">Inactif</span>
+                    {% endif %}
+                </td>
+                <td>{{ v.quantite_semaine }}</td>
+                <td>{{ v.ca_semaine|montant_fr }} MAD</td>
+                <td>
+                    {% if v.tendance is None %}
+                        <span class="text-muted">—</span>
+                    {% elif v.tendance >= 0 %}
+                        <span class="text-success">↑ {{ v.tendance }}%</span>
+                    {% else %}
+                        <span class="text-danger">↓ {{ v.tendance }}%</span>
+                    {% endif %}
+                </td>
+                <td>{{ v.nb_clients }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted py-4">Aucun vendeur trouvé.</td></tr>
+            {% endfor %}
+            <tr id="ligne-aucun-resultat" hidden>
+                <td colspan="7" class="text-center text-muted py-4">Aucun vendeur ne correspond à votre recherche.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+const recherche = document.getElementById('recherche-vendeur');
+const filtreType = document.getElementById('filtre-type');
+const filtreStatut = document.getElementById('filtre-statut');
+const ligneAucunResultat = document.getElementById('ligne-aucun-resultat');
+const lignes = document.querySelectorAll('#table-vendeurs tbody tr[data-nom]');
+
+function appliquerFiltres() {
+    const texte = recherche.value.toLowerCase();
+    const type = filtreType.value.toLowerCase();
+    const statut = filtreStatut.value;
+    let nbVisibles = 0;
+
+    lignes.forEach(ligne => {
+        const matchTexte = ligne.dataset.nom.includes(texte);
+        const matchType = !type || ligne.dataset.type.includes(type);
+        const matchStatut = !statut || ligne.dataset.statut === statut;
+        const visible = matchTexte && matchType && matchStatut;
+        ligne.style.display = visible ? '' : 'none';
+        if (visible) nbVisibles++;
+    });
+
+    if (ligneAucunResultat) {
+        ligneAucunResultat.hidden = nbVisibles !== 0 || lignes.length === 0;
+    }
+}
+
+recherche.addEventListener('input', appliquerFiltres);
+filtreType.addEventListener('change', appliquerFiltres);
+filtreStatut.addEventListener('change', appliquerFiltres);
+
+// --- Tri par colonne (clic sur l'en-tête) ---
+const corpsTable = document.querySelector('#table-vendeurs tbody');
+let triActuel = { colonne: null, ascendant: true };
+
+document.querySelectorAll('#table-vendeurs th.th-sort').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+        const colonne = th.dataset.sort;
+        const type = th.dataset.type;
+        const ascendant = (triActuel.colonne === colonne) ? !triActuel.ascendant : true;
+        triActuel = { colonne, ascendant };
+
+        const lignesTriables = Array.from(lignes);
+        lignesTriables.sort((a, b) => {
+            let va = a.dataset[colonne];
+            let vb = b.dataset[colonne];
+            if (type === 'num') {
+                va = parseFloat(va) || 0;
+                vb = parseFloat(vb) || 0;
+                return ascendant ? va - vb : vb - va;
+            }
+            return ascendant ? va.localeCompare(vb) : vb.localeCompare(va);
+        });
+
+        lignesTriables.forEach(ligne => corpsTable.insertBefore(ligne, ligneAucunResultat));
+
+        document.querySelectorAll('#table-vendeurs th.th-sort .sort-icon').forEach(icon => {
+            icon.className = 'bi bi-arrow-down-up sort-icon';
+        });
+        th.querySelector('.sort-icon').className = ascendant
+            ? 'bi bi-sort-up sort-icon'
+            : 'bi bi-sort-down sort-icon';
+    });
+});
+</script>
+{% endblock %}

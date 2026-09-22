@@ -1,0 +1,12 @@
+{% extends 'commercial/chef_region/base.html' %}
+
+{% block titre %}Dashboard — {{ agence.nom_agence }}{% endblock %}
+
+{% block contenu %}
+<h1 class="mb-1">Bonjour, {{ chef_region.id_chef_region.prenom }}</h1>
+<p class="text-muted mb-4">{{ agence.nom_agence }} — {{ date_aujourdhui_fr }}</p>
+
+{% url 'commercial:liste_vendeurs_chef_region' as lien_vendeurs_url %}
+{% url 'commercial:produits_chef_region' as lien_produits_url %}
+{% include 'commercial/_partials/dashboard_body.html' %}
+{% endblock %}

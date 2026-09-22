@@ -1,0 +1,173 @@
+{% extends 'commercial/espace_commercial/base.html' %}
+{% load formatage %}
+
+{% block titre %}Vue d'ensemble — Provixa{% endblock %}
+
+{% block contenu %}
+<h1 class="mb-1">Vue d'ensemble</h1>
+<p class="text-muted mb-4">Comparaison de vos {{ agences_commercial|length }} agence(s) — CA de la semaine</p>
+
+<style>
+    .stat-mini {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+    }
+    .stat-mini .icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 0.65rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        background: #e8f0ff;
+        color: #3d7dfc;
+        flex-shrink: 0;
+    }
+    .stat-mini .value { font-size: 1.4rem; font-weight: 700; color: #111827; line-height: 1.1; }
+    .stat-mini .label { font-size: 0.8rem; color: #6b7280; }
+</style>
+
+{% if agences_commercial %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-mini h-100">
+            <div class="icon"><i class="bi bi-cash-stack"></i></div>
+            <div>
+                <div class="value">{{ ca_total_semaine|montant_fr }} DH</div>
+                <div class="label">CA total cette semaine (toutes agences)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-mini h-100">
+            <div class="icon"><i class="bi bi-trophy-fill"></i></div>
+            <div>
+                <div class="value">{{ meilleure_agence.nom_agence|default:"—" }}</div>
+                <div class="label">Meilleure agence cette semaine</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-mini h-100">
+            <div class="icon" style="background:#fdecec; color:#e5484d;"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div>
+                {% if agence_a_surveiller %}
+                <div class="value">{{ agence_a_surveiller.nom_agence }}</div>
+                <div class="label">
+                    À surveiller — {{ agence_a_surveiller.nb_produits_rotation_lente }} produit(s) et
+                    {{ agence_a_surveiller.nb_vendeurs_inactifs }} vendeur(s) inactifs
+                </div>
+                {% else %}
+                <div class="value">—</div>
+                <div class="label">Aucune agence à surveiller pour le moment</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3 mb-4">
+    <h5 class="mb-3">Chiffre d'affaires par agence (semaine)</h5>
+    <div style="position: relative; height: 320px;">
+        <canvas id="chartComparaisonAgences"></canvas>
+    </div>
+</div>
+
+<div class="card">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th>Agence</th>
+                <th>Région</th>
+                <th>CA (semaine)</th>
+                <th>Évolution</th>
+                <th>Quantité vendue</th>
+                <th>Ventes (transactions)</th>
+                <th title="Produits actifs sans vente depuis {{ seuil_rotation_lente_jours }} jours">Rotation lente</th>
+                <th title="Vendeurs actifs sans vente depuis {{ seuil_rotation_lente_jours }} jours">Vendeurs inactifs</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in comparaison %}
+            <tr>
+                <td>{{ a.nom_agence }}</td>
+                <td><span class="badge bg-light text-dark">{{ a.region }}</span></td>
+                <td>{{ a.ca_semaine|montant_fr }} DH</td>
+                <td>
+                    {% if a.tendance_ca is None %}
+                        <span class="text-muted">—</span>
+                    {% elif a.tendance_ca >= 0 %}
+                        <span class="text-success">↑ {{ a.tendance_ca }}%</span>
+                    {% else %}
+                        <span class="text-danger">↓ {{ a.tendance_ca }}%</span>
+                    {% endif %}
+                </td>
+                <td>{{ a.quantite_semaine }}</td>
+                <td>{{ a.nb_ventes_semaine }}</td>
+                <td>
+                    {% if a.nb_produits_rotation_lente %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis">{{ a.nb_produits_rotation_lente }}</span>
+                    {% else %}
+                        <span class="text-muted">0</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if a.nb_vendeurs_inactifs %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis">{{ a.nb_vendeurs_inactifs }}</span>
+                    {% else %}
+                        <span class="text-muted">0</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'commercial:dashboard_agence_commercial' a.id_agence %}" class="small text-decoration-none">
+                        Détail <i class="bi bi-arrow-right"></i>
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+new Chart(document.getElementById('chartComparaisonAgences'), {
+    type: 'bar',
+    data: {
+        labels: [{% for a in comparaison %}"{{ a.nom_agence|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'CA (semaine)',
+            data: [{% for a in comparaison %}{{ a.ca_semaine }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: '#3d7dfc',
+            borderRadius: 6,
+            maxBarThickness: 56,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: (ctx) => `${ctx.parsed.y.toLocaleString('fr-FR')} DH`,
+                }
+            }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: '#f0f1f5' } },
+            x: { grid: { display: false } },
+        },
+    }
+});
+</script>
+
+{% else %}
+<div class="card p-4 text-center text-muted">
+    Aucune agence ne vous est assignée pour le moment.
+</div>
+{% endif %}
+{% endblock %}

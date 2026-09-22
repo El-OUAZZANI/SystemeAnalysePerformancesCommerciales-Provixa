@@ -1,0 +1,26 @@
+<ul class="nav nav-pills mb-4" style="gap: 0.4rem;">
+    <li class="nav-item">
+        <a class="nav-link {% if section_active == 'agence_dashboard' %}active{% endif %}"
+           href="{% url 'commercial:dashboard_agence_commercial' agence.id_agence %}">
+            <i class="bi bi-grid-1x2-fill me-1"></i>Dashboard
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if section_active == 'agence_vendeurs' %}active{% endif %}"
+           href="{% url 'commercial:vendeurs_agence_commercial' agence.id_agence %}">
+            <i class="bi bi-people-fill me-1"></i>Vendeurs
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if section_active == 'agence_produits' %}active{% endif %}"
+           href="{% url 'commercial:produits_agence_commercial' agence.id_agence %}">
+            <i class="bi bi-box-seam-fill me-1"></i>Produits
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if section_active == 'agence_previsions' %}active{% endif %}"
+           href="{% url 'commercial:previsions_agence_commercial' agence.id_agence %}">
+            <i class="bi bi-graph-up-arrow me-1"></i>Prévisions
+        </a>
+    </li>
+</ul>
